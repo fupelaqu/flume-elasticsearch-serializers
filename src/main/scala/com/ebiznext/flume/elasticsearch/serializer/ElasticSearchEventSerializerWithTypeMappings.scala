@@ -8,7 +8,6 @@ import org.apache.flume.Event
 import org.apache.flume.conf.ComponentConfiguration
 import org.apache.flume.formatter.output.BucketPath
 import org.apache.flume.sink.elasticsearch.{ElasticSearchDynamicSerializer, ElasticSearchIndexRequestBuilderFactory}
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequest
 import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.client.Client
 
