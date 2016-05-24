@@ -2,7 +2,7 @@ package com.ebiznext.flume.elasticsearch.serializer
 
 import java.util.UUID
 
-import com.ebiznext.flume.elasticsearch.EmbeddedElasticSearchNode
+import com.ebiznext.flume.elasticsearch.{SearchGuardElasticSearchSink, EmbeddedElasticSearchNode}
 import com.ebiznext.flume.elasticsearch.conf.Settings
 import org.apache.flume.channel.MemoryChannel
 import org.apache.flume.conf.Configurables
@@ -20,6 +20,7 @@ import org.junit.Assert._
 import org.apache.flume._
 
 import com.ebiznext.flume.elasticsearch.serializer.ElasticSearchEventSerializerWithTypeMappings._
+import com.ebiznext.flume.elasticsearch.client.SearchGuardElasticSearchTransportClientConstants._
 
 /**
   *
@@ -76,8 +77,8 @@ class TestElasticSearchEventSerializerWithTypeMappings extends EmbeddedElasticSe
 
   @Test
   def testElasticSearchSink() = {
-    val fixture: ElasticSearchSink = new ElasticSearchSink()
-    fixture.setName("ElasticSearchSink-" + UUID.randomUUID.toString)
+    val fixture = new SearchGuardElasticSearchSink
+    fixture.setName("SearchGuardElasticSearchSink-" + UUID.randomUUID.toString)
 
     // Configure ElasticSearch Sink
     val context = new Context
@@ -87,13 +88,12 @@ class TestElasticSearchEventSerializerWithTypeMappings extends EmbeddedElasticSe
     context.put(CLUSTER_NAME, Settings.ElasticSearch.Cluster)
     context.put(BATCH_SIZE, "1")
     val classz = ElasticSearchEventSerializerWithTypeMappings.getClass
-    context.put(SERIALIZER, "com.ebiznext.flume.elasticsearch.serializer.ElasticSearchEventSerializerWithTypeMappings") //s"${classz.getPackage.getName}.${classz.getSimpleName}")
+    context.put(SERIALIZER, "com.ebiznext.flume.elasticsearch.serializer.ElasticSearchEventSerializerWithTypeMappings")
     context.put(SERIALIZER_PREFIX+CONF_INDICES, "i1")
     context.put(s"${SERIALIZER_PREFIX}i1.$CONF_TYPES", "t1")
     context.put(s"${SERIALIZER_PREFIX}i1.t1.$CONF_MAPPINGS_FILE", getClass.getResource("/t1.json").getPath)
-    import ElasticSearchEventSerializerWithTypeMappings._
-    context.put(SERIALIZER_PREFIX+SEARCH_GUARD_USERNAME, "root")
-    context.put(SERIALIZER_PREFIX+SEARCH_GUARD_PASSWORD, "changeit")
+    context.put(CLIENT_PREFIX+SEARCH_GUARD_USERNAME, "root")
+    context.put(CLIENT_PREFIX+SEARCH_GUARD_PASSWORD, "changeit")
     Configurables.configure(fixture, context)
 
     // Configure the channel

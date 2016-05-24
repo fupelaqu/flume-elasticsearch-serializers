@@ -3,6 +3,7 @@ package com.ebiznext.flume.elasticsearch.serializer
 import java.io.ByteArrayInputStream
 import java.util.TimeZone
 
+import com.ebiznext.flume.elasticsearch.client.SearchGuardElasticSearchTransportClientConstants._
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.lang.time.FastDateFormat
 import org.apache.flume.Context
@@ -103,10 +104,6 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
     *          Flume event to serialize and add to index request
     */
   protected def prepareIndexRequest(indexRequest: IndexRequestBuilder, indexName: String, indexType: String, event: Event): IndexRequestBuilder = {
-    credentials match {
-      case Some(s) => indexRequest.putHeader("searchguard_transport_creds", s)
-      case _ =>
-    }
     val body = event.getBody
     def source(request: IndexRequestBuilder) = {
       if(isJSONValid(body))
@@ -152,9 +149,6 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
 }
 
 object ElasticSearchEventSerializerWithTypeMappings{
-  val SEARCH_GUARD_USERNAME = "searchguard-username"
-
-  val SEARCH_GUARD_PASSWORD = "searchguard-password"
 
   val CONF_INDICES = "indices"
 
