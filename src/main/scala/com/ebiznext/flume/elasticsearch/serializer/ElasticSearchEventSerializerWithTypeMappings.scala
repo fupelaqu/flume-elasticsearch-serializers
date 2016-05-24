@@ -1,13 +1,16 @@
 package com.ebiznext.flume.elasticsearch.serializer
 
+import java.io.ByteArrayInputStream
 import java.util.TimeZone
 
+import org.apache.commons.codec.binary.Base64
 import org.apache.commons.lang.time.FastDateFormat
 import org.apache.flume.Context
 import org.apache.flume.Event
 import org.apache.flume.conf.ComponentConfiguration
 import org.apache.flume.formatter.output.BucketPath
 import org.apache.flume.sink.elasticsearch.{ElasticSearchDynamicSerializer, ElasticSearchIndexRequestBuilderFactory}
+import org.codehaus.jackson.map.ObjectMapper
 import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.client.Client
 
@@ -15,7 +18,7 @@ import com.google.common.annotations.VisibleForTesting
 import org.elasticsearch.indices.IndexAlreadyExistsException
 
 import scala.io.Source
-import scala.util.Success
+import scala.util.{Failure, Try, Success}
 
 /**
   *
@@ -31,9 +34,9 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
 
   private[this] var mappingsCache = Set[String]()
 
-  private[this] val fastDateFormat: FastDateFormat = FastDateFormat.getInstance("yyyy-MM-dd", TimeZone.getTimeZone("Etc/UTC"))
-
   private[this] val serializer = new ElasticSearchDynamicSerializer
+
+  private[this] var credentials: Option[String] = None
 
   private def mappings(source: Source) = using(source){
     source => source.mkString
@@ -74,23 +77,18 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
       }
       case _ =>
     }
+    Option(context.getString(SEARCH_GUARD_USERNAME)) match {
+      case Some(username) => Option(context.getString(SEARCH_GUARD_PASSWORD)) match {
+        case Some(password) =>
+          credentials = Some(Base64.encodeBase64String(s"$username:$password".getBytes))
+        case _ =>
+      }
+      case _ =>
+    }
   }
 
   @VisibleForTesting
   def prepareIndex(client: Client): IndexRequestBuilder = client.prepareIndex()
-
-  /**
-    * Gets the name of the index to use for an index request
-    *
-    * @return index name of the form 'indexPrefix-formattedTimestamp'
-    * @param indexPrefix
-    *          Prefix of index name to use -- as configured on the sink
-    * @param timestamp
-    *          timestamp (millis) to format / use
-    */
-  def getIndexName(indexPrefix: String, timestamp: Long): String =
-    new StringBuilder(indexPrefix).append('-')
-      .append(fastDateFormat.format(timestamp)).toString()
 
   /**
     * Prepares an ElasticSearch IndexRequestBuilder instance
@@ -104,11 +102,19 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
     * @param event
     *          Flume event to serialize and add to index request
     */
-  protected def prepareIndexRequest(indexRequest: IndexRequestBuilder, indexName: String, indexType: String, event: Event) {
-    val contentBuilder = serializer.getContentBuilder(event)
-    indexRequest.setIndex(indexName)
-      .setType(indexType)
-      .setSource(contentBuilder.bytes())
+  protected def prepareIndexRequest(indexRequest: IndexRequestBuilder, indexName: String, indexType: String, event: Event): IndexRequestBuilder = {
+    credentials match {
+      case Some(s) => indexRequest.putHeader("searchguard_transport_creds", s)
+      case _ =>
+    }
+    val body = event.getBody
+    def source(request: IndexRequestBuilder) = {
+      if(isJSONValid(body))
+        request.setSource(body)
+      else
+        request.setSource(serializer.getContentBuilder(event).bytes())
+    }
+    source(indexRequest.setIndex(indexName).setType(indexType))
   }
 
   /**
@@ -125,8 +131,16 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
     */
   private def createIndexWithMapping(client: Client, indexName: String, indexType: String, jsonMappings: String) {
     try {
-      client.admin().indices().prepareCreate(indexName).addMapping(indexType, jsonMappings).get()
-      mappingsCache = mappingsCache + s"$indexName.$indexType"
+      val createIndexRequestBuilder = client.admin().indices().prepareCreate(indexName)
+      credentials match {
+        case Some(s) => createIndexRequestBuilder.putHeader("searchguard_transport_creds", s)
+        case _ =>
+      }
+      Try(createIndexRequestBuilder.addMapping(indexType, jsonMappings).get()) match {
+        case Success(s) =>
+          mappingsCache = mappingsCache + s"$indexName.$indexType"
+        case Failure(f) =>
+      }
     } catch {
       case e:IndexAlreadyExistsException => throw e
     }
@@ -138,10 +152,33 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
 }
 
 object ElasticSearchEventSerializerWithTypeMappings{
+  val SEARCH_GUARD_USERNAME = "searchguard-username"
+
+  val SEARCH_GUARD_PASSWORD = "searchguard-password"
+
   val CONF_INDICES = "indices"
 
   val CONF_TYPES = "types"
 
   val CONF_MAPPINGS_FILE = "mappingsFile"
 
+  private[this] val fastDateFormat: FastDateFormat = FastDateFormat.getInstance("yyyy-MM-dd", TimeZone.getTimeZone("Etc/UTC"))
+
+  /**
+    * Gets the name of the index to use for an index request
+    *
+    * @return index name of the form 'indexPrefix-formattedTimestamp'
+    * @param indexPrefix
+    *          Prefix of index name to use -- as configured on the sink
+    * @param timestamp
+    *          timestamp (millis) to format / use
+    */
+  def getIndexName(indexPrefix: String, timestamp: Long): String =
+    new StringBuilder(indexPrefix).append('-')
+      .append(fastDateFormat.format(timestamp)).toString()
+
+
+  def isJSONValid(input: Array[Byte]): Boolean = {
+    Try(new ObjectMapper().readTree(new ByteArrayInputStream(input))).isSuccess
+  }
 }
