@@ -7,7 +7,6 @@ import com.ebiznext.flume.elasticsearch.conf.Settings
 import org.apache.flume.channel.MemoryChannel
 import org.apache.flume.conf.Configurables
 import org.apache.flume.event.EventBuilder
-import org.apache.flume.sink.elasticsearch.ElasticSearchSink
 import org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants._
 import org.elasticsearch.client.Requests
 import org.elasticsearch.cluster.metadata.MappingMetaData
@@ -87,7 +86,6 @@ class TestElasticSearchEventSerializerWithTypeMappings extends EmbeddedElasticSe
     context.put(INDEX_TYPE, "%{type}")
     context.put(CLUSTER_NAME, Settings.ElasticSearch.Cluster)
     context.put(BATCH_SIZE, "1")
-    val classz = ElasticSearchEventSerializerWithTypeMappings.getClass
     context.put(SERIALIZER, "com.ebiznext.flume.elasticsearch.serializer.ElasticSearchEventSerializerWithTypeMappings")
     context.put(SERIALIZER_PREFIX+CONF_INDICES, "i1")
     context.put(s"${SERIALIZER_PREFIX}i1.$CONF_TYPES", "t1")
@@ -124,12 +122,12 @@ class TestElasticSearchEventSerializerWithTypeMappings extends EmbeddedElasticSe
 
     val indexName = ElasticSearchEventSerializerWithTypeMappings.getIndexName("i1", event.getTimestamp)
     val client = esNode.client()
+    client.admin.indices().refresh(Requests.refreshRequest(indexName)).actionGet()
+
     val mapping: MappingMetaData = client.admin().indices().prepareGetMappings(indexName).get().getMappings.get(indexName).get("t1")
     assertTrue(Option(mapping).isDefined)
 
-    client.admin.indices().refresh(Requests.refreshRequest(indexName)).actionGet()
-    val response = client.prepareSearch(indexName).setTypes("t1").setQuery(QueryBuilders.matchAllQuery).execute().actionGet()
-    val hits = response.getHits
+    val hits = client.prepareSearch(indexName).setTypes("t1").setQuery(QueryBuilders.matchAllQuery).execute().actionGet().getHits
     assertEquals(1, hits.getTotalHits)
     assertEquals(new String(event.getBody), hits.getAt(0).getSourceAsString)
   }

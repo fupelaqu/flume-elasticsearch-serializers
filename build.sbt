@@ -2,7 +2,7 @@ organization := "com.ebiznext.flume"
 
 name := "flume-elasticsearch-serializers"
 
-version := "0.1-SNAPSHOT"
+version := "0.1.0"
 
 crossScalaVersions in ThisBuild := Seq("2.10.6", "2.11.8")
 
@@ -50,5 +50,7 @@ credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 publishArtifact in(Compile, packageSrc) := true
 
 publishArtifact in(Test, packageSrc) := true
+
+publishArtifact in(Test, packageBin) := true
 
 fork := true

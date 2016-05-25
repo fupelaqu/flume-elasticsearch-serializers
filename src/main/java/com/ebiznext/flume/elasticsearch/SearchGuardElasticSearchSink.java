@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.commons.lang.StringUtils;
 import org.apache.flume.*;
+import org.apache.flume.Sink.Status;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.formatter.output.BucketPath;
 import org.apache.flume.instrumentation.SinkCounter;
