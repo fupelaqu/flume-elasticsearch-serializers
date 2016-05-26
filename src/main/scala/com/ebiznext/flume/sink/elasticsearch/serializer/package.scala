@@ -1,4 +1,4 @@
-package com.ebiznext.flume.elasticsearch
+package com.ebiznext.flume.sink.elasticsearch
 
 import scala.util.Try
 

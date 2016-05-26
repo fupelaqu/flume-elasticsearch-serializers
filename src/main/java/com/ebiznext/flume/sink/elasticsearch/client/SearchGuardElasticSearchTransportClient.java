@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.ebiznext.flume.elasticsearch.client;
+package com.ebiznext.flume.sink.elasticsearch.client;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
@@ -42,7 +42,7 @@ import java.util.Arrays;
 
 import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.DEFAULT_PORT;
 
-import static com.ebiznext.flume.elasticsearch.client.SearchGuardElasticSearchTransportClientConstants.*;
+import static com.ebiznext.flume.sink.elasticsearch.client.SearchGuardElasticSearchTransportClientConstants.*;
 
 public class SearchGuardElasticSearchTransportClient implements ElasticSearchClient {
 

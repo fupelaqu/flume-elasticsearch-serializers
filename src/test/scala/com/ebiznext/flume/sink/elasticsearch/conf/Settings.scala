@@ -1,4 +1,4 @@
-package com.ebiznext.flume.elasticsearch.conf
+package com.ebiznext.flume.sink.elasticsearch.conf
 
 import com.typesafe.config.{Config, ConfigFactory}
 

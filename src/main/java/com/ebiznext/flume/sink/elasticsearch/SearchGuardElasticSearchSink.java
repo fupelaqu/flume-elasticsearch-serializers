@@ -16,10 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.ebiznext.flume.elasticsearch;
+package com.ebiznext.flume.sink.elasticsearch;
 
-import com.ebiznext.flume.elasticsearch.client.SearchGuardElasticSearchTransportClient;
-import com.ebiznext.flume.elasticsearch.serializer.ElasticSearchEventSerializerWithTypeMappings;
+import com.ebiznext.flume.sink.elasticsearch.client.SearchGuardElasticSearchTransportClient;
+import com.ebiznext.flume.sink.elasticsearch.serializer.ElasticSearchEventSerializerWithTypeMappings;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.commons.lang.StringUtils;

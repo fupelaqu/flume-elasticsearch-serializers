@@ -1,4 +1,4 @@
-package com.ebiznext.flume.elasticsearch
+package com.ebiznext.flume.sink.elasticsearch
 
 import java.io.{ File, IOException }
 import java.nio.file.FileVisitResult._
@@ -19,7 +19,7 @@ import org.elasticsearch.node.{ Node, NodeBuilder }
 import org.elasticsearch.plugins.PluginManager
 import org.slf4j.LoggerFactory
 
-import com.ebiznext.flume.elasticsearch.conf.Settings.ElasticSearch._
+import com.ebiznext.flume.sink.elasticsearch.conf.Settings.ElasticSearch._
 
 /**
  *

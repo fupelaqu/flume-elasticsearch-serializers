@@ -1,4 +1,4 @@
-package com.ebiznext.flume.elasticsearch.client;
+package com.ebiznext.flume.sink.elasticsearch.client;
 
 /**
  *

@@ -1,9 +1,9 @@
-package com.ebiznext.flume.elasticsearch.serializer
+package com.ebiznext.flume.sink.elasticsearch.serializer
 
 import java.io.ByteArrayInputStream
 import java.util.TimeZone
 
-import com.ebiznext.flume.elasticsearch.client.SearchGuardElasticSearchTransportClientConstants._
+import com.ebiznext.flume.sink.elasticsearch.client.SearchGuardElasticSearchTransportClientConstants._
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.lang.time.FastDateFormat
 import org.apache.flume.Context
@@ -31,6 +31,8 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
 
   type IndexPrefix = String
 
+  private[this] var indicesRotations = Map[IndexPrefix, Option[String]]()
+
   private[this] var indicesMappings = Map[IndexPrefix, String]()
 
   private[this] var mappingsCache = Set[String]()
@@ -49,7 +51,7 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
     val realIndexType = BucketPath.escapeString(indexType, event.getHeaders)
     val timestampedEvent = new TimestampEvent(event)
     val timestamp = timestampedEvent.getTimestamp
-    val indexName = getIndexName(realIndexPrefix, timestamp)
+    val indexName = getIndexName(realIndexPrefix, indicesRotations.get(realIndexPrefix).flatten, timestamp)
     if (!mappingsCache.contains(s"$indexName.$indexType") && indicesMappings.contains(s"$indexPrefix.$indexType")){
       createIndexWithMapping(client, indexName, realIndexType, indicesMappings.get(s"$indexPrefix.$indexType").get)
     }
@@ -62,7 +64,9 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
   override def configure(context: Context): Unit = {
     Option(context.getString(CONF_INDICES)) match {
       case Some(s) => s.split(",").foreach{
-        indice => context.getSubProperties(s"$indice.").get(CONF_TYPES) match {
+        indice =>
+          indicesRotations = indicesRotations + (indice -> Option(context.getSubProperties(s"$indice.").get(CONF_ROTATION)))
+          context.getSubProperties(s"$indice.").get(CONF_TYPES) match {
           case types: String => types.split(",").foreach{
             t => context.getSubProperties(s"$indice.$t.").get(CONF_MAPPINGS_FILE) match {
               case file: String => mappings(Source.fromFile(file)) match {
@@ -152,11 +156,13 @@ object ElasticSearchEventSerializerWithTypeMappings{
 
   val CONF_INDICES = "indices"
 
+  val CONF_ROTATION = "rotation"
+
   val CONF_TYPES = "types"
 
   val CONF_MAPPINGS_FILE = "mappingsFile"
 
-  private[this] val fastDateFormat: FastDateFormat = FastDateFormat.getInstance("yyyy-MM-dd", TimeZone.getTimeZone("Etc/UTC"))
+  import Rotations._
 
   /**
     * Gets the name of the index to use for an index request
@@ -164,15 +170,36 @@ object ElasticSearchEventSerializerWithTypeMappings{
     * @return index name of the form 'indexPrefix-formattedTimestamp'
     * @param indexPrefix
     *          Prefix of index name to use -- as configured on the sink
+    * @param rotation
+    *          rotation to use for this index -- as configured on the sink
     * @param timestamp
     *          timestamp (millis) to format / use
     */
-  def getIndexName(indexPrefix: String, timestamp: Long): String =
+  def getIndexName(indexPrefix: String, rotation: Option[String], timestamp: Long): String =
     new StringBuilder(indexPrefix).append('-')
-      .append(fastDateFormat.format(timestamp)).toString()
+      .append(Rotation(rotation).format(timestamp)).toString()
 
 
   def isJSONValid(input: Array[Byte]): Boolean = {
     Try(new ObjectMapper().readTree(new ByteArrayInputStream(input))).isSuccess
+  }
+}
+
+object Rotations {
+  sealed abstract class Rotation(val pattern: String){
+    private[this] val fastDateFormat: FastDateFormat = FastDateFormat.getInstance(pattern, TimeZone.getTimeZone("Etc/UTC"))
+    def format(timeStamp: Long): String = fastDateFormat.format(timeStamp)
+  }
+  case object DAILY extends Rotation("yyyy-MM-dd")
+  case object MONTHLY extends Rotation("yyyy-MM")
+  case object YEARLY extends Rotation("yyyy")
+  object Rotation{
+    def apply(name: Option[String]): Rotation = {
+      name match {
+        case Some(s) if s.trim.toLowerCase == "monthly" => MONTHLY
+        case Some(s) if s.trim.toLowerCase == "yearly" => YEARLY
+        case _ => DAILY
+      }
+    }
   }
 }

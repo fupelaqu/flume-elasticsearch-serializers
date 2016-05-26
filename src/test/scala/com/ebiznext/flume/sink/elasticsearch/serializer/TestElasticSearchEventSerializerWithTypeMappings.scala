@@ -1,9 +1,9 @@
-package com.ebiznext.flume.elasticsearch.serializer
+package com.ebiznext.flume.sink.elasticsearch.serializer
 
 import java.util.UUID
 
-import com.ebiznext.flume.elasticsearch.{SearchGuardElasticSearchSink, EmbeddedElasticSearchNode}
-import com.ebiznext.flume.elasticsearch.conf.Settings
+import com.ebiznext.flume.sink.elasticsearch.{SearchGuardElasticSearchSink, EmbeddedElasticSearchNode}
+import com.ebiznext.flume.sink.elasticsearch.conf.Settings
 import org.apache.flume.channel.MemoryChannel
 import org.apache.flume.conf.Configurables
 import org.apache.flume.event.EventBuilder
@@ -18,8 +18,8 @@ import org.junit.Assert._
 
 import org.apache.flume._
 
-import com.ebiznext.flume.elasticsearch.serializer.ElasticSearchEventSerializerWithTypeMappings._
-import com.ebiznext.flume.elasticsearch.client.SearchGuardElasticSearchTransportClientConstants._
+import com.ebiznext.flume.sink.elasticsearch.serializer.ElasticSearchEventSerializerWithTypeMappings._
+import com.ebiznext.flume.sink.elasticsearch.client.SearchGuardElasticSearchTransportClientConstants._
 
 /**
   *
@@ -66,7 +66,7 @@ class TestElasticSearchEventSerializerWithTypeMappings extends EmbeddedElasticSe
     serializer.configure(context)
     assertEquals(1, serializer.getIndicesMappings.size)
     val event = new TimestampEvent(EventBuilder.withBody("{\"p1\": 1}".getBytes()))
-    val indexName = ElasticSearchEventSerializerWithTypeMappings.getIndexName("i1", event.getTimestamp)
+    val indexName = ElasticSearchEventSerializerWithTypeMappings.getIndexName("i1", None, event.getTimestamp)
     val client = esNode.client()
     serializer.createIndexRequest(client, "i1", "t1", event)
     assertEquals(1, serializer.getMappingsCache.size)
@@ -120,7 +120,7 @@ class TestElasticSearchEventSerializerWithTypeMappings extends EmbeddedElasticSe
     fixture.process
     fixture.stop()
 
-    val indexName = ElasticSearchEventSerializerWithTypeMappings.getIndexName("i1", event.getTimestamp)
+    val indexName = ElasticSearchEventSerializerWithTypeMappings.getIndexName("i1", None, event.getTimestamp)
     val client = esNode.client()
     client.admin.indices().refresh(Requests.refreshRequest(indexName)).actionGet()
 

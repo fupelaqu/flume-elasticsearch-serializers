@@ -1,4 +1,4 @@
-package com.ebiznext.flume.elasticsearch.serializer
+package com.ebiznext.flume.sink.elasticsearch.serializer
 
 import java.util
 

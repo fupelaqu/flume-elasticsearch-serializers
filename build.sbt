@@ -2,7 +2,7 @@ organization := "com.ebiznext.flume"
 
 name := "flume-elasticsearch-serializers"
 
-version := "0.1.0"
+version := "0.1.1"
 
 crossScalaVersions in ThisBuild := Seq("2.10.6", "2.11.8")
 
