@@ -112,6 +112,9 @@ public class SearchGuardElasticSearchTransportClient implements ElasticSearchCli
       }
     } finally {
       bulkRequestBuilder = client.prepareBulk();
+      if(StringUtils.isNotEmpty(credentials)){
+        bulkRequestBuilder.putHeader("searchguard_transport_creds", credentials);
+      }
     }
   }
 
@@ -142,6 +145,9 @@ public class SearchGuardElasticSearchTransportClient implements ElasticSearchCli
     String password = context.getString(SEARCH_GUARD_PASSWORD);
     if(StringUtils.isNotEmpty(username) && StringUtils.isNotEmpty(password)){
       credentials = Base64.encodeBase64String(username.concat(":").concat(password).getBytes());
+    }
+    else{
+      logger.warn("no credentials have been specified");
     }
   }
 }
