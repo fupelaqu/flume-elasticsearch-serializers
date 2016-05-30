@@ -10,7 +10,7 @@ import org.apache.flume.Context
 import org.apache.flume.Event
 import org.apache.flume.conf.ComponentConfiguration
 import org.apache.flume.formatter.output.BucketPath
-import org.apache.flume.sink.elasticsearch.{ElasticSearchDynamicSerializer, ElasticSearchIndexRequestBuilderFactory}
+import org.apache.flume.sink.elasticsearch.{ElasticSearchEventSerializer, ElasticSearchDynamicSerializer, ElasticSearchIndexRequestBuilderFactory}
 import org.codehaus.jackson.map.ObjectMapper
 import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.client.Client
@@ -37,7 +37,7 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
 
   private[this] var mappingsCache = Set[String]()
 
-  private[this] val serializer = new ElasticSearchDynamicSerializer
+  private[this] var serializer: ElasticSearchEventSerializer = null
 
   private[this] var credentials: Option[String] = None
 
@@ -62,6 +62,14 @@ class ElasticSearchEventSerializerWithTypeMappings extends ElasticSearchIndexReq
   override def configure(conf: ComponentConfiguration): Unit = {}
 
   override def configure(context: Context): Unit = {
+    serializer = Try{
+      Class.forName(
+        Option(context.getString(EVENT_SERIALIZER)) match {
+          case Some(serializerClass) if serializerClass.trim.length > 0 => serializerClass
+          case _ => DEFAULT_EVENT_SERIALIZER
+        }
+      ).newInstance().asInstanceOf[ElasticSearchEventSerializer]
+    }.getOrElse(new ElasticSearchDynamicSerializer)
     Option(context.getString(CONF_INDICES)) match {
       case Some(s) => s.split(",").foreach{
         indice =>
@@ -161,6 +169,10 @@ object ElasticSearchEventSerializerWithTypeMappings{
   val CONF_TYPES = "types"
 
   val CONF_MAPPINGS_FILE = "mappingsFile"
+
+  val EVENT_SERIALIZER = "eventSerializer"
+
+  val DEFAULT_EVENT_SERIALIZER = "org.apache.flume.sink.elasticsearch.ElasticSearchDynamicSerializer"
 
   import Rotations._
 

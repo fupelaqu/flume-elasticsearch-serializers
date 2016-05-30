@@ -87,6 +87,7 @@ class TestElasticSearchEventSerializerWithTypeMappings extends EmbeddedElasticSe
     context.put(CLUSTER_NAME, Settings.ElasticSearch.Cluster)
     context.put(BATCH_SIZE, "1")
     context.put(SERIALIZER, "com.ebiznext.flume.elasticsearch.serializer.ElasticSearchEventSerializerWithTypeMappings")
+    context.put(SERIALIZER_PREFIX+EVENT_SERIALIZER, "org.apache.flume.sink.elasticsearch.ElasticSearchLogStashEventSerializer")
     context.put(SERIALIZER_PREFIX+CONF_INDICES, "i1")
     context.put(s"${SERIALIZER_PREFIX}i1.$CONF_TYPES", "t1")
     context.put(s"${SERIALIZER_PREFIX}i1.t1.$CONF_MAPPINGS_FILE", getClass.getResource("/t1.json").getPath)
